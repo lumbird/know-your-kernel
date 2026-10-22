@@ -277,6 +277,19 @@ aside.panel { border-left: 1px solid var(--line); background: var(--surface); pa
   .boot .body { grid-column: 2; grid-row: 2 }
 }
 
+/* search */
+.search { position: relative; flex: 0 1 240px; min-width: 0 }
+.search input { width: 100%; font: 13px var(--font-body); padding: 6px 30px 6px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink) }
+.search kbd { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 11px var(--font-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; pointer-events: none }
+.search input:focus + kbd { display: none }
+#qres { position: absolute; top: calc(100% + 4px); left: 0; width: min(380px, calc(100vw - 32px)); margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.18); z-index: 20; max-height: 60vh; overflow-y: auto }
+#qres li { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 2px 8px; align-items: baseline; padding: 6px 8px; border-radius: 4px; cursor: pointer }
+#qres li[aria-selected="true"], #qres li:hover { background: var(--sunk) }
+#qres b { font-weight: 600 }
+#qres small { grid-column: 2; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+#qres .none { color: var(--muted); cursor: default }
+@media (max-width: 900px) { .search { flex: 1 1 100%; order: 3; margin-bottom: 8px } .search kbd { display: none } }
+
 /* phone */
 @media (max-width: 900px) {
   .shell { grid-template-columns: minmax(0, 1fr) }
@@ -301,6 +314,11 @@ aside.panel { border-left: 1px solid var(--line); background: var(--surface); pa
 <header class="top">
   <div class="top-in">
     <div class="brand"><h1>The Linux Kernel</h1><span>Know Your Kernel · x86-64</span></div>
+    <div class="search">
+      <input id="q" type="search" placeholder="Search parts or symbols" aria-label="Search kernel parts and symbols" autocomplete="off" spellcheck="false">
+      <kbd>/</kbd>
+      <ul id="qres" role="listbox" hidden></ul>
+    </div>
     <nav class="tabs" role="tablist" id="tabs"></nav>
   </div>
 </header>
@@ -888,6 +906,54 @@ BUILD.boot = function () {
       (s.p ? "<code>" + esc(s.p) + "</code>" : "") + "</" + tag + "></li>";
   }).join("");
 };
+
+/* search */
+(function () {
+  var q = $("#q"), list = $("#qres"), hits = [], cur = 0;
+  function score(c, t) {
+    var n = c.name.toLowerCase(), s = 0;
+    if (n === t) s = 100; else if (n.indexOf(t) === 0) s = 80; else if (n.indexOf(t) >= 0) s = 60;
+    if (c.keys.some(function (k) { return k.toLowerCase().indexOf(t) >= 0; })) s = Math.max(s, 50);
+    if (c.id.indexOf(t) >= 0) s = Math.max(s, 45);
+    if (c.sum.toLowerCase().indexOf(t) >= 0 || c.path.toLowerCase().indexOf(t) >= 0) s = Math.max(s, 20);
+    return s;
+  }
+  function render() {
+    var t = q.value.trim().toLowerCase();
+    if (!t) { list.hidden = true; return; }
+    hits = K.components.map(function (c) { return [score(c, t), c]; }).filter(function (x) { return x[0] > 0; })
+      .sort(function (a, b) { return b[0] - a[0] || a[1].name.localeCompare(b[1].name); }).slice(0, 8).map(function (x) { return x[1]; });
+    cur = 0;
+    list.innerHTML = hits.length ? hits.map(function (c, i) {
+      var key = c.keys.filter(function (k) { return k.toLowerCase().indexOf(t) >= 0; })[0];
+      return '<li role="option" data-i="' + i + '" aria-selected="' + (i === 0) + '" style="--c:' + gc(c.group) + '"><span class="dot"></span><b>' + esc(c.name) + "</b><small>" +
+        (key ? "<code>" + esc(key) + "</code> · " : "") + esc(K.groups[c.group].name) + "</small></li>";
+    }).join("") : '<li class="none">No match. Try a function name like <code>kmalloc</code>.</li>';
+    list.hidden = false;
+  }
+  function mark() { list.querySelectorAll("li[data-i]").forEach(function (li) { li.setAttribute("aria-selected", +li.dataset.i === cur); }); }
+  function pick(i) {
+    var c = hits[i]; if (!c) return;
+    q.value = ""; list.hidden = true; q.blur();
+    select(c.id);
+    var el = document.querySelector('#stack .chip[data-id="' + c.id + '"]');
+    if (el && !el.closest("[hidden]")) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+  q.addEventListener("input", render);
+  q.addEventListener("focus", render);
+  q.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown") { cur = Math.min(hits.length - 1, cur + 1); mark(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { cur = Math.max(0, cur - 1); mark(); e.preventDefault(); }
+    else if (e.key === "Enter") { pick(cur); e.preventDefault(); }
+    else if (e.key === "Escape") { q.value = ""; list.hidden = true; q.blur(); }
+  });
+  list.addEventListener("mousedown", function (e) { var li = e.target.closest("li[data-i]"); if (li) { e.preventDefault(); pick(+li.dataset.i); } });
+  q.addEventListener("blur", function () { setTimeout(function () { list.hidden = true; }, 100); });
+  document.addEventListener("keydown", function (e) {
+    var tag = (e.target.tagName || "").toLowerCase();
+    if (e.key === "/" && tag !== "input" && tag !== "textarea") { e.preventDefault(); q.focus(); }
+  });
+})();
 
 /* boot */
 renderPanel();
