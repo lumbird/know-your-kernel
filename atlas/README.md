@@ -41,6 +41,10 @@ Small notes on Linux (x86-64, mainline). Generated from `docs/data/` by `tools/b
 - [Allocator stack (top = caller side)](memory/allocators.md)
 - [Zone watermarks](memory/watermarks.md)
 
+## Boot
+
+- [Boot sequence (x86-64)](boot/sequence.md)
+
 ## Channels
 
 - [System call](channels/system-call.md)

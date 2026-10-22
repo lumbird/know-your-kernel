@@ -9,7 +9,7 @@ const dataDir = path.join(root, "docs", "data");
 const out = path.join(root, "atlas");
 
 const ctx = {}; ctx.window = ctx; vm.createContext(ctx);
-for (const f of ["components.js", "communication.js", "interrupts.js", "scheduler.js", "memory.js"])
+for (const f of ["components.js", "communication.js", "interrupts.js", "scheduler.js", "memory.js", "boot.js"])
   vm.runInContext(fs.readFileSync(path.join(dataDir, f), "utf8"), ctx);
 const K = ctx.KF;
 const byId = Object.fromEntries(K.components.map(c => [c.id, c]));
@@ -209,6 +209,15 @@ ${K.watermarks.map(w => `- **${w.n}** — ${w.d}`).join("\n")}
 - Reclaim order: clean page cache → dirty cache (writeback) → anon to swap → OOM killer.
 `);
 
+// ── boot
+write("boot/sequence.md", `
+# Boot sequence (x86-64)
+
+${K.boot.map((s, i) => `${i + 1}. **${s.t}** (${K.bootPhases[s.ph].name}) — ${s.d}${s.p ? ` (\`${s.p}\`)` : ""}`).join("\n")}
+
+- PID 0 = idle task, PID 1 = init, PID 2 = kthreadd (parent of all kernel threads).
+`);
+
 // ── index (hand-written notes in atlas/notes/ are listed too, never overwritten)
 const notesDir = path.join(out, "notes");
 if (fs.existsSync(notesDir)) for (const f of fs.readdirSync(notesDir)) if (f.endsWith(".md")) files.push("notes/" + f);
@@ -230,6 +239,8 @@ ${sec("Interrupts", "interrupts/")}
 ${sec("Scheduler", "scheduler/")}
 
 ${sec("Memory", "memory/")}
+
+${sec("Boot", "boot/")}
 
 ${sec("Channels", "channels/")}
 

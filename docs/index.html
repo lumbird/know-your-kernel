@@ -253,6 +253,26 @@ aside.panel { border-left: 1px solid var(--line); background: var(--surface); pa
 #wm { width: 100%; height: auto; display: block }
 #wm text { font: 10.5px var(--font-mono); fill: var(--muted) }
 
+/* boot */
+.boot { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; max-width: 820px }
+.boot li { display: grid; grid-template-columns: 120px 22px minmax(0, 1fr); gap: 12px; position: relative; padding-bottom: 16px }
+.boot li::before { content: ""; position: absolute; left: 142px; top: 20px; bottom: 0; border-left: 2px solid var(--line) }
+.boot li:last-child::before { display: none }
+.boot .ph { font: 600 10.5px var(--font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--c); padding-top: 3px; text-align: right }
+.boot .k { width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: var(--surface); font: 600 10px var(--font-mono); display: grid; place-items: center }
+.boot .body { text-align: left; border: 0; background: none; padding: 0 0 0 2px; border-radius: 4px }
+.boot .body[data-id]:hover b { text-decoration: underline }
+.boot b { font-weight: 600; display: block }
+.boot small { color: var(--muted); display: block; font-size: 13px }
+.boot code { color: var(--muted); font-size: 11px }
+@media (max-width: 900px) {
+  .boot li { grid-template-columns: 22px minmax(0, 1fr); gap: 2px 12px }
+  .boot li::before { left: 10px }
+  .boot .ph { grid-column: 2; grid-row: 1; text-align: left; padding: 0 }
+  .boot .k { grid-column: 1; grid-row: 1 / span 2 }
+  .boot .body { grid-column: 2; grid-row: 2 }
+}
+
 /* phone */
 @media (max-width: 900px) {
   .shell { grid-template-columns: minmax(0, 1fr) }
@@ -376,6 +396,11 @@ aside.panel { border-left: 1px solid var(--line); background: var(--surface); pa
         </div>
       </div>
     </section>
+    <section class="view" id="v-boot" data-tab="boot" hidden>
+      <div class="sec-head"><h2>Boot sequence</h2><p class="lede">From power-on to the login prompt. Click a step to open the part it starts.</p></div>
+      <div class="legend" id="bootleg"></div>
+      <ol class="boot" id="bootline"></ol>
+    </section>
   </main>
   <aside class="panel" id="panel" aria-live="polite"></aside>
 </div>
@@ -386,6 +411,7 @@ aside.panel { border-left: 1px solid var(--line); background: var(--surface); pa
 <script src="data/interrupts.js"></script>
 <script src="data/scheduler.js"></script>
 <script src="data/memory.js"></script>
+<script src="data/boot.js"></script>
 <script>
 (function () {
 "use strict";
@@ -403,7 +429,7 @@ function nbrs(id) {
 function chip(c) { return '<button class="chip" data-id="' + c.id + '" style="--c:' + gc(c.group) + '"><span class="dot"></span>' + esc(c.name) + "</button>"; }
 
 /* ── tabs */
-var TABS = [["stack", "Stack"], ["network", "Network"], ["comm", "Communication"], ["interrupts", "Interrupts"], ["scheduler", "Scheduler"], ["memory", "Memory"]];
+var TABS = [["stack", "Stack"], ["network", "Network"], ["comm", "Communication"], ["interrupts", "Interrupts"], ["scheduler", "Scheduler"], ["memory", "Memory"], ["boot", "Boot"]];
 var built = {}, cur = null;
 $("#tabs").innerHTML = TABS.map(function (t) { return '<button role="tab" data-t="' + t[0] + '" aria-selected="false">' + t[1] + "</button>"; }).join("");
 $("#tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) show(b.dataset.t, true); });
@@ -838,6 +864,20 @@ BUILD.memory = function () {
     '<div class="arrow">no VMA / bad permission ↓</div>' + node(F.segv, "signals");
   $("#alloc").innerHTML = K.allocStack.map(function (s) { return '<button data-id="' + s.c + '"><b>' + esc(s.n) + "</b><span>" + esc(s.d) + "</span></button>"; }).join("");
   wmChart(); walk();
+};
+
+/* boot view */
+BUILD.boot = function () {
+  var P = K.bootPhases;
+  $("#bootleg").innerHTML = Object.keys(P).map(function (k) { return '<span><span class="dot" style="--c:' + gc(P[k].g) + '"></span>' + esc(P[k].name) + "</span>"; }).join("");
+  var last = null;
+  $("#bootline").innerHTML = K.boot.map(function (s, i) {
+    var ph = P[s.ph], showPh = s.ph !== last, tag = s.c ? "button" : "div";
+    last = s.ph;
+    return '<li style="--c:' + gc(ph.g) + '"><span class="ph">' + (showPh ? esc(ph.name) : "") + '</span><span class="k">' + (i + 1) + "</span>" +
+      "<" + tag + ' class="body"' + (s.c ? ' data-id="' + s.c + '"' : "") + "><b>" + esc(s.t) + "</b><small>" + esc(s.d) + "</small>" +
+      (s.p ? "<code>" + esc(s.p) + "</code>" : "") + "</" + tag + "></li>";
+  }).join("");
 };
 
 /* boot */
