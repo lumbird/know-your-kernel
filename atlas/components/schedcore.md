@@ -8,4 +8,4 @@ Per-CPU run queues. Picks the next task by class priority and switches to it.
 
 **Connects to:** [Tasks](../components/task.md) · [EEVDF (fair)](../components/fair.md) · [Real-time](../components/rt.md) · [Deadline](../components/dl.md) · [sched_ext](../components/schedext.md) · [Context switch](../components/switch.md) · [Time & timers](../components/timers.md) · [Wait queues](../components/waitq.md) · [APIC](../components/apic.md)
 
-**Appears in:** [Disk read](../traces/disk.md)
+**Appears in:** [Disk read](../traces/disk.md) · [fork + exec](../traces/forkexec.md) · [Ctrl+C](../traces/ctrlc.md)

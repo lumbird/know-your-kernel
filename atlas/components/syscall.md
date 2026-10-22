@@ -8,4 +8,4 @@
 
 **Connects to:** [C library](../components/libc.md) · [Entry code](../components/entry.md) · [VFS](../components/vfs.md) · [Sockets](../components/socket.md) · [Tasks](../components/task.md) · [mmap / brk](../components/mmap.md) · [Signals](../components/signals.md) · [Futex](../components/futex.md) · [io_uring](../components/iouring.md) · [eBPF](../components/bpf.md) · [seccomp](../components/seccomp.md) · [User copy](../components/uaccess.md)
 
-**Appears in:** [Disk read](../traces/disk.md)
+**Appears in:** [Disk read](../traces/disk.md) · [fork + exec](../traces/forkexec.md)

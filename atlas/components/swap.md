@@ -7,3 +7,5 @@ Anonymous pages written to swap; the PTE keeps a swap entry to fault them back i
 **Key symbols:** `swp_entry_t`, `swap cache`, `zswap`
 
 **Connects to:** [Reclaim](../components/reclaim.md) · [Page fault](../components/pagefault.md) · [Block layer](../components/blkmq.md)
+
+**Appears in:** [Swap-in fault](../traces/swapin.md)

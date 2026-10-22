@@ -8,4 +8,4 @@ How a task sleeps until an event. wake_up() makes it runnable again.
 
 **Connects to:** [Scheduler core](../components/schedcore.md) · [poll / epoll](../components/epoll.md) · [Locks & RCU](../components/locking.md) · [Page cache](../components/pagecache.md) · [Futex](../components/futex.md) · [Pipes & IPC](../components/ipc.md)
 
-**Appears in:** [Disk read](../traces/disk.md)
+**Appears in:** [Disk read](../traces/disk.md) · [Swap-in fault](../traces/swapin.md)

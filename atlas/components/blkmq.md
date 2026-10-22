@@ -8,4 +8,4 @@ Turns bios into requests on per-CPU and hardware queues, then hands them to the 
 
 **Connects to:** [ext4](../components/ext4.md) · [Page cache](../components/pagecache.md) · [NVMe driver](../components/nvme.md) · [Swap](../components/swap.md) · [io_uring](../components/iouring.md) · [Softirqs](../components/softirq.md)
 
-**Appears in:** [Disk read](../traces/disk.md)
+**Appears in:** [Disk read](../traces/disk.md) · [Swap-in fault](../traces/swapin.md)

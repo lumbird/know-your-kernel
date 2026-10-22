@@ -544,6 +544,7 @@ BUILD.network = function () {
 var VIA = {
   call:    { n: "function call", c: "var(--muted)", a: false },
   trap:    { n: "trap / syscall", c: "var(--g-abi)", a: false },
+  ret:     { n: "return to user", c: "var(--g-user)", a: false },
   mmio:    { n: "MMIO write", c: "var(--g-drv)", a: false },
   copy:    { n: "copy to user", c: "var(--g-fs)", a: false },
   dma:     { n: "DMA", c: "var(--g-mm)", a: true },

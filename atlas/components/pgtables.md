@@ -7,3 +7,5 @@ Virtual → physical translation tree, 4 or 5 levels of 512 entries. CR3 points 
 **Key symbols:** `pgd/p4d/pud/pmd/pte`, `CR3`, `PCID`, `flush_tlb_*`
 
 **Connects to:** [Address spaces](../components/vma.md) · [Page fault](../components/pagefault.md) · [MMU & TLB](../components/mmu.md) · [Context switch](../components/switch.md) · [vmalloc](../components/vmalloc.md)
+
+**Appears in:** [fork + exec](../traces/forkexec.md) · [Swap-in fault](../traces/swapin.md)
