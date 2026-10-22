@@ -7,3 +7,5 @@ Every thread is a task_struct. fork/clone copy one, exec replaces its image, exi
 **Key symbols:** `task_struct`, `copy_process`, `kernel_clone`, `do_execve`, `do_exit`
 
 **Connects to:** [Scheduler core](../components/schedcore.md) · [Address spaces](../components/vma.md) · [Signals](../components/signals.md) · [cgroups](../components/cgroups.md) · [Namespaces](../components/ns.md) · [procfs](../components/procfs.md) · [Syscall entry](../components/syscall.md) · [LSM](../components/lsm.md) · [Boot & init](../components/boot.md)
+
+**Appears in:** [fork + exec](../traces/forkexec.md)

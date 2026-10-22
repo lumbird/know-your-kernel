@@ -8,4 +8,4 @@ Submission/completion queue pairs in RAM. Doorbell write starts I/O; MSI-X signa
 
 **Connects to:** [Block layer](../components/blkmq.md) · [PCI / PCIe](../components/pci.md) · [DMA mapping](../components/dma.md) · [Generic IRQ](../components/genirq.md) · [NVMe SSD](../components/ssd.md)
 
-**Appears in:** [Disk read](../traces/disk.md)
+**Appears in:** [Disk read](../traces/disk.md) · [Swap-in fault](../traces/swapin.md)

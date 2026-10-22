@@ -7,3 +7,5 @@ Assembly that saves registers into pt_regs, switches stacks and GS, then calls C
 **Key symbols:** `DEFINE_IDTENTRY`, `irqentry_enter/exit`, `swapgs`, `FRED`
 
 **Connects to:** [IDT](../components/idt.md) · [Syscall entry](../components/syscall.md) · [Generic IRQ](../components/genirq.md) · [Page fault](../components/pagefault.md) · [Signals](../components/signals.md) · [CPU exceptions](../components/traps.md)
+
+**Appears in:** [fork + exec](../traces/forkexec.md) · [Swap-in fault](../traces/swapin.md) · [Ctrl+C](../traces/ctrlc.md)

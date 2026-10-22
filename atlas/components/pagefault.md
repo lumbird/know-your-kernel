@@ -7,3 +7,5 @@
 **Key symbols:** `exc_page_fault`, `handle_mm_fault`, `do_anonymous_page`, `do_wp_page`, `do_swap_page`
 
 **Connects to:** [Entry code](../components/entry.md) · [Address spaces](../components/vma.md) · [Page tables](../components/pgtables.md) · [Page allocator](../components/buddy.md) · [Page cache](../components/pagecache.md) · [Swap](../components/swap.md) · [Signals](../components/signals.md) · [Application](../components/app.md) · [User copy](../components/uaccess.md)
+
+**Appears in:** [fork + exec](../traces/forkexec.md) · [Swap-in fault](../traces/swapin.md)

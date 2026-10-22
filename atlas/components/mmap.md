@@ -7,3 +7,5 @@ Creates VMAs. Pages are not allocated until first touch.
 **Key symbols:** `do_mmap`, `munmap`, `brk`, `vm_operations_struct`
 
 **Connects to:** [Address spaces](../components/vma.md) · [Syscall entry](../components/syscall.md) · [Page cache](../components/pagecache.md) · [DRM / GPU](../components/drm.md)
+
+**Appears in:** [fork + exec](../traces/forkexec.md)

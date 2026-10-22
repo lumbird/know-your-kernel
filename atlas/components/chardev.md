@@ -6,6 +6,6 @@
 
 **Key symbols:** `cdev_add`, `misc_register`, `major:minor`
 
-**Connects to:** [VFS](../components/vfs.md) · [ioctl](../components/ioctl.md) · [Input](../components/input.md) · [DRM / GPU](../components/drm.md)
+**Connects to:** [VFS](../components/vfs.md) · [ioctl](../components/ioctl.md) · [Input](../components/input.md) · [DRM / GPU](../components/drm.md) · [TTY & pty](../components/tty.md)
 
 **Appears in:** [Keypress](../traces/key.md)

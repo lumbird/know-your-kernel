@@ -19,6 +19,9 @@ Small notes on Linux (x86-64, mainline). Generated from `docs/data/` by `tools/b
 - [Trace: Keypress](traces/key.md)
 - [Trace: Packet receive](traces/net.md)
 - [Trace: USB hotplug](traces/plug.md)
+- [Trace: fork + exec](traces/forkexec.md)
+- [Trace: Swap-in fault](traces/swapin.md)
+- [Trace: Ctrl+C](traces/ctrlc.md)
 
 ## Interrupts
 
@@ -91,7 +94,7 @@ Small notes on Linux (x86-64, mainline). Generated from `docs/data/` by `tools/b
 
 **Interrupts:** [Generic IRQ](components/genirq.md) · [Softirqs](components/softirq.md)
 
-**Drivers:** [kobject & uevent](components/kobject.md) · [Driver model](components/drvcore.md) · [Modules](components/module.md) · [PCI / PCIe](components/pci.md) · [DMA mapping](components/dma.md) · [NVMe driver](components/nvme.md) · [NIC driver](components/nicdrv.md) · [USB](components/usb.md) · [Input](components/input.md) · [DRM / GPU](components/drm.md)
+**Drivers:** [kobject & uevent](components/kobject.md) · [Driver model](components/drvcore.md) · [Modules](components/module.md) · [PCI / PCIe](components/pci.md) · [DMA mapping](components/dma.md) · [NVMe driver](components/nvme.md) · [NIC driver](components/nicdrv.md) · [USB](components/usb.md) · [Input](components/input.md) · [TTY & pty](components/tty.md) · [DRM / GPU](components/drm.md)
 
 **x86-64 arch:** [Boot & init](components/boot.md) · [IDT](components/idt.md) · [Entry code](components/entry.md) · [CPU exceptions](components/traps.md) · [APIC](components/apic.md) · [Context switch](components/switch.md)
 

@@ -9,7 +9,7 @@ KF.lanes = [
   { id: "hw",   name: "Hardware" }
 ];
 
-/* via: call | trap | mmio | dma | irq | softirq | wake | copy | event */
+/* via: call | trap | ret | mmio | dma | irq | softirq | wake | copy | event */
 KF.traces = [
   { id: "disk", name: "Disk read", q: "read(fd, buf, 4096) on an uncached ext4 file",
     steps: [
@@ -54,6 +54,44 @@ KF.traces = [
       { a: "abi",  b: "user", via: "event", c: "udev",    t: "udevd receives uevent", d: "Runs rules, may modprobe, creates /dev/disk/by-* links." },
       { a: "user", b: "abi",  via: "trap",  c: "module",  t: "modprobe → finit_module", d: "Only when no driver was loaded; probe follows." },
       { a: "abi",  b: "user", via: "event", c: "udev",    t: "udev re-broadcasts to apps", d: "Desktop shows the new drive." }
+    ] },
+  { id: "forkexec", name: "fork + exec", q: "A shell runs `ls`: fork() then execve()",
+    steps: [
+      { a: "user", b: "abi",  via: "trap", c: "syscall",   t: "clone() (glibc fork)", d: "Shell asks for a copy of itself." },
+      { a: "abi",  b: "core", via: "call", c: "task",      t: "kernel_clone → copy_process", d: "New task_struct; files, signal handlers and creds are duplicated." },
+      { a: "core", b: "core", via: "call", c: "vma",       t: "dup_mm copies the VMAs", d: "Private pages are shared, not copied." },
+      { a: "core", b: "core", via: "call", c: "pgtables",  t: "PTEs copied read-only", d: "First write by either side triggers copy-on-write." },
+      { a: "core", b: "core", via: "wake", c: "schedcore", t: "wake_up_new_task", d: "Child placed on a run queue." },
+      { a: "core", b: "user", via: "ret",  c: "syscall",   t: "Two returns", d: "Parent gets the child PID; child gets 0." },
+      { a: "user", b: "abi",  via: "trap", c: "syscall",   t: "Child calls execve(\"/bin/ls\")", d: "Replace this process image." },
+      { a: "abi",  b: "core", via: "call", c: "vfs",       t: "Open and check the binary", d: "Path lookup, permission and LSM checks." },
+      { a: "core", b: "core", via: "call", c: "task",      t: "load_elf_binary", d: "Old mm dropped; new stack built with argv and envp." },
+      { a: "core", b: "core", via: "call", c: "mmap",      t: "Map ELF segments", d: "VMAs for text, data, stack. Nothing read from disk yet." },
+      { a: "core", b: "user", via: "ret",  c: "entry",     t: "Return to the new entry point", d: "Execution starts in the dynamic loader." },
+      { a: "user", b: "core", via: "trap", c: "pagefault", t: "First instruction faults", d: "Code is paged in from the page cache on demand." }
+    ] },
+  { id: "swapin", name: "Swap-in fault", q: "A process touches a page that was swapped out",
+    steps: [
+      { a: "user", b: "hw",   via: "call",  c: "mmu",       t: "Load from the address", d: "MMU walk finds a PTE with present = 0." },
+      { a: "hw",   b: "abi",  via: "trap",  c: "entry",     t: "#PF → exc_page_fault", d: "CR2 holds the address." },
+      { a: "abi",  b: "core", via: "call",  c: "pagefault", t: "handle_mm_fault → do_swap_page", d: "PTE holds a swap entry: device + slot." },
+      { a: "core", b: "core", via: "call",  c: "swap",      t: "Swap cache miss", d: "Allocate a folio, add it to the swap cache." },
+      { a: "core", b: "drv",  via: "call",  c: "blkmq",     t: "Read the swap slot", d: "bio queued to the NVMe driver." },
+      { a: "drv",  b: "hw",   via: "mmio",  c: "nvme",      t: "Doorbell write", d: "SSD starts the read." },
+      { a: "core", b: "core", via: "wake",  c: "waitq",     t: "Task sleeps on the folio", d: "This is a major fault." },
+      { a: "hw",   b: "drv",  via: "irq",   c: "genirq",    t: "Completion IRQ", d: "Data is in RAM; folio unlocked, task woken." },
+      { a: "core", b: "core", via: "call",  c: "pgtables",  t: "Install the PTE", d: "Swap slot freed if no one else needs it." },
+      { a: "core", b: "user", via: "ret",   c: "entry",     t: "Return from the fault", d: "The load re-executes and succeeds." }
+    ] },
+  { id: "ctrlc", name: "Ctrl+C", q: "Ctrl+C in a terminal stops the running program",
+    steps: [
+      { a: "user", b: "abi",  via: "trap", c: "tty",       t: "Terminal writes 0x03 to the pty", d: "The emulator turns the keypress into the INTR byte." },
+      { a: "abi",  b: "drv",  via: "call", c: "tty",       t: "n_tty sees INTR", d: "ISIG is on, so it is not passed on as input." },
+      { a: "drv",  b: "core", via: "call", c: "signals",   t: "isig → kill_pgrp(SIGINT)", d: "Queued on every task in the foreground process group." },
+      { a: "core", b: "core", via: "wake", c: "schedcore", t: "signal_wake_up", d: "A task blocked in read() is woken." },
+      { a: "core", b: "core", via: "call", c: "entry",     t: "Exit-to-user work", d: "TIF_SIGPENDING checked before returning." },
+      { a: "core", b: "user", via: "ret",  c: "signals",   t: "Deliver the signal", d: "Default action terminates; a handler gets a signal frame instead." },
+      { a: "user", b: "abi",  via: "trap", c: "signals",   t: "rt_sigreturn", d: "Handler returns; saved registers restored." }
     ] }
 ];
 
