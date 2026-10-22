@@ -59,6 +59,10 @@ main { min-width: 0; padding-block: 20px 60px; padding-left: max(16px, env(safe-
 .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap }
 .scroll-x { overflow-x: auto; min-width: 0 }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px }
+.foot { border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 12.5px; display: grid; gap: 6px;
+  padding-block: 18px max(24px, env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.foot p { max-width: 90ch }
+.foot b { color: var(--ink); font-weight: 600 }
 
 /* inspector */
 aside.panel { border-left: 1px solid var(--line); background: var(--surface); padding: 20px 18px 40px; position: sticky; top: calc(53px + env(safe-area-inset-top, 0px));
@@ -379,6 +383,10 @@ aside.panel { border-left: 1px solid var(--line); background: var(--surface); pa
   </main>
   <aside class="panel" id="panel" aria-live="polite"></aside>
 </div>
+<footer class="foot">
+  <p><b>Disclaimer.</b> An educational project, provided as is with no warranty. Content may be incomplete, outdated or inaccurate, so check the kernel source and official documentation before relying on it. The author accepts no responsibility for any loss or damage arising from its use.</p>
+  <p>Not affiliated with the Linux Foundation or the kernel maintainers. Linux® is the registered trademark of Linus Torvalds. © 2026 LumBird · <a href="https://github.com/lumbird/know-your-kernel/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></p>
+</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="data/components.js"></script>

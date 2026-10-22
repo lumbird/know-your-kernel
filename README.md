@@ -25,6 +25,12 @@ Then open http://localhost:8765.
 node tools/build-atlas.mjs
 ```
 
+## Disclaimer
+
+An educational project, provided as is with no warranty. Content may be incomplete, outdated or inaccurate, so check the kernel source and official documentation before relying on it. The author accepts no responsibility for any loss or damage arising from its use.
+
+Not affiliated with the Linux Foundation or the kernel maintainers. Linux® is the registered trademark of Linus Torvalds.
+
 ## License
 
 © 2026 LumBird · [MIT License](LICENSE)

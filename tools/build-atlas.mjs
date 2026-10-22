@@ -221,6 +221,8 @@ write("README.md", `
 
 Small notes on Linux (x86-64, mainline). Generated from \`docs/data/\` by \`tools/build-atlas.mjs\`; hand-written notes live in \`atlas/notes/\`.
 
+> Educational notes, provided as is. They may be incomplete, outdated or inaccurate; check the kernel source before relying on them. See the [main README](../README.md#disclaimer).
+
 ${sec("Concepts", "notes/")}
 
 ${sec("Traces", "traces/")}
