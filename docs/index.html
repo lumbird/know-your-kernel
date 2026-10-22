@@ -1,0 +1,849 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Linux Kernel</title>
+<meta name="description" content="Know Your Kernel: an interactive map of the Linux kernel on x86-64.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232f5bd3'/%3E%3Cpath d='M4 4h8v8H4z' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: schematic sheet — sticky tab bar, view canvas left, inspector panel right (bottom sheet on phones). */
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --sunk: #e3e8ed; --ink: #15202b; --muted: #5a6876; --line: #cad3db; --accent: #2f5bd3;
+  --g-user: #64748b; --g-abi: #7c3aed; --g-proc: #c2410c; --g-sync: #a16207; --g-mm: #0f766e; --g-fs: #1d4ed8;
+  --g-net: #15803d; --g-sec: #be123c; --g-irq: #dc2626; --g-drv: #a21caf; --g-arch: #7a6440; --g-hw: #475569;
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e141a; --surface: #151d25; --sunk: #1b252f; --ink: #e2e8ee; --muted: #8d9ba8; --line: #2a3642; --accent: #85a2ff;
+  --g-user: #9aa8b8; --g-abi: #a78bfa; --g-proc: #fb923c; --g-sync: #eab308; --g-mm: #2dd4bf; --g-fs: #60a5fa;
+  --g-net: #4ade80; --g-sec: #fb7185; --g-irq: #f87171; --g-drv: #e879f9; --g-arch: #c8b38a; --g-hw: #a3b1c2; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e141a; --surface: #151d25; --sunk: #1b252f; --ink: #e2e8ee; --muted: #8d9ba8; --line: #2a3642; --accent: #85a2ff;
+  --g-user: #9aa8b8; --g-abi: #a78bfa; --g-proc: #fb923c; --g-sync: #eab308; --g-mm: #2dd4bf; --g-fs: #60a5fa;
+  --g-net: #4ade80; --g-sec: #fb7185; --g-irq: #f87171; --g-drv: #e879f9; --g-arch: #c8b38a; --g-hw: #a3b1c2; color-scheme: dark }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { height: 100% }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font-body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface) }
+code, .mono { font-family: var(--font-mono); font-size: .86em }
+a { color: var(--accent) }
+button { font: inherit; color: inherit; cursor: pointer }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0 }
+h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: .01em }
+h3 { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--muted) }
+p { margin: 0 }
+
+/* header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top-in { display: flex; align-items: center; gap: 20px; min-height: 52px; flex-wrap: wrap }
+.brand { display: flex; align-items: baseline; gap: 10px }
+.brand h1 { font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em }
+.brand span { font: 500 11px var(--font-mono); color: var(--muted) }
+nav.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0 }
+nav.tabs button { background: none; border: 0; padding: 15px 12px 13px; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; white-space: nowrap }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent) }
+
+/* shell */
+.shell { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 0; min-height: calc(100% - 53px) }
+main { min-width: 0; padding-block: 20px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px }
+.view { display: grid; gap: 28px }
+.lede { color: var(--muted); max-width: 68ch }
+.sec { display: grid; gap: 12px; min-width: 0 }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+.scroll-x { overflow-x: auto; min-width: 0 }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px }
+
+/* inspector */
+aside.panel { border-left: 1px solid var(--line); background: var(--surface); padding: 20px 18px 40px; position: sticky; top: calc(53px + env(safe-area-inset-top, 0px));
+  height: calc(100vh - 53px - env(safe-area-inset-top, 0px)); overflow-y: auto; padding-right: max(18px, env(safe-area-inset-right, 0px)) }
+.panel .empty { color: var(--muted) }
+.panel-close { display: none }
+.p-grp { display: inline-flex; align-items: center; gap: 6px; font: 600 11px var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none }
+.panel h2 { font-size: 1.5rem; margin: 6px 0 4px; font-weight: 800 }
+.panel .sum { margin: 10px 0 16px }
+.panel .blk { display: grid; gap: 6px; margin-bottom: 16px }
+.keys { display: flex; flex-wrap: wrap; gap: 4px }
+.keys code { background: var(--sunk); padding: 2px 6px; border-radius: 3px; overflow-wrap: anywhere }
+.linklist { display: flex; flex-wrap: wrap; gap: 6px }
+.linkbtn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 3px 10px 3px 8px; font-size: 12.5px }
+.linkbtn:hover { border-color: var(--c) }
+.note { font: 12px var(--font-mono); color: var(--muted); overflow-wrap: anywhere }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; padding: 5px 9px; font-size: 13px; line-height: 1.2; text-align: left;
+  transition: opacity .15s, border-color .15s, box-shadow .15s }
+.chip:hover { border-color: var(--c) }
+.chip.sel { border-color: var(--c); box-shadow: 0 0 0 1.5px var(--c) inset }
+.dim .chip:not(.hl):not(.sel) { opacity: .28 }
+
+/* stack */
+.stack { display: grid; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface) }
+.band { display: grid; grid-template-columns: 150px minmax(0, 1fr); border-top: 1px solid var(--line) }
+.band:first-child { border-top: 0 }
+.band-lab { padding: 12px 14px; background: var(--sunk); display: grid; align-content: start; gap: 2px }
+.band-lab b { font: 700 13px var(--font-display) }
+.band-lab span { font: 11px var(--font-mono); color: var(--muted) }
+.band-body { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; min-width: 0 }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; width: 100% }
+.col { display: grid; gap: 6px; align-content: start }
+.col h3 { font-size: 10.5px; display: flex; gap: 6px; align-items: center }
+.col .chips { display: flex; flex-wrap: wrap; gap: 5px }
+.boundary { border-top: 2px dashed var(--g-abi) }
+
+/* network */
+.filters { display: flex; flex-wrap: wrap; gap: 6px }
+.fbtn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px; font-size: 12px }
+.fbtn[aria-pressed="false"] { opacity: .45 }
+#net { width: 100%; height: min(78vh, 760px); display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; touch-action: none }
+#net text { font: 11px var(--font-body); fill: var(--ink); pointer-events: none; paint-order: stroke; stroke: var(--surface); stroke-width: 3px }
+#net .lk { stroke: var(--line); stroke-width: 1.2 }
+#net .lk.hl { stroke: var(--ink); stroke-width: 1.6 }
+#net .nd { cursor: pointer }
+#net.dimmed .nd:not(.hl) { opacity: .15 }
+#net.dimmed .lk:not(.hl) { opacity: .1 }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted) }
+.legend span { display: inline-flex; align-items: center; gap: 6px }
+
+/* communication */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; flex-wrap: wrap; background: var(--surface) }
+.seg button { border: 0; background: none; padding: 7px 14px; font-weight: 500; color: var(--muted) }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface) }
+.trace { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start }
+.seq { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px }
+.seq svg { display: block; width: 100%; min-width: 440px; height: auto }
+.seq text { font: 11px var(--font-body); fill: var(--muted) }
+.seq .lanehead { font: 700 11px var(--font-display); fill: var(--ink); text-transform: uppercase; letter-spacing: .06em }
+.seq .lane { stroke: var(--line); stroke-dasharray: 3 4 }
+.seq .row { cursor: pointer }
+.seq .row rect.hit { fill: transparent }
+.seq .row.on rect.hit { fill: var(--sunk) }
+.seq .row.off { opacity: .3 }
+.seq .num { font: 600 10px var(--font-mono); fill: var(--surface) }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: s }
+.steps li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; padding: 7px 8px; border-radius: 4px; cursor: pointer }
+.steps li.on { background: var(--surface); box-shadow: 0 0 0 1px var(--line) inset }
+.steps li.off { opacity: .4 }
+.steps .n { font: 600 11px var(--font-mono); width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: var(--surface); background: var(--c) }
+.steps b { font-weight: 600 }
+.steps small { display: block; color: var(--muted); font-size: 12.5px }
+.via { font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--c) }
+.player { display: flex; gap: 6px; align-items: center; flex-wrap: wrap }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; padding: 6px 12px; font-weight: 500 }
+.btn.pri { background: var(--accent); color: var(--surface); border-color: var(--accent) }
+.vialeg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px }
+.vialeg span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted) }
+.vialeg i { width: 18px; height: 0; border-top: 2px solid var(--c) }
+.vialeg i.async { border-top-style: dashed }
+.chgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px }
+.chcol { display: grid; gap: 6px; align-content: start }
+.ch { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 9px 11px; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 5px }
+.ch:hover { border-color: var(--accent) }
+.ch b { font-weight: 600 }
+.ch small { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px }
+.mode { font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); align-self: center }
+
+/* interrupts */
+.cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px }
+.cmp .card { padding: 14px 16px; display: grid; gap: 10px }
+.cmp dl { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 6px 10px; margin: 0; font-size: 13px }
+.cmp dt { color: var(--muted); font: 11px var(--font-mono); padding-top: 2px }
+.cmp dd { margin: 0 }
+.cmp .bar { display: flex; gap: 1px; height: 22px }
+.cmp .bar i { flex: 1; border-radius: 2px }
+.gate { display: grid; gap: 6px; min-width: 560px }
+.grow { display: grid; grid-template-columns: 74px repeat(32, minmax(0, 1fr)); gap: 2px; align-items: stretch }
+.grow .rl { font: 10px var(--font-mono); color: var(--muted); align-self: center }
+.fld { border: 1px solid var(--line); background: var(--surface); border-radius: 3px; padding: 6px 2px; font: 600 10.5px var(--font-mono); text-align: center; overflow: hidden; white-space: nowrap; text-overflow: clip }
+.fld small { display: block; font-weight: 400; color: var(--muted); font-size: 9px }
+.fld.on { border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset }
+.fld.z { background: var(--sunk); color: var(--muted) }
+.infobox { padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; min-height: 44px }
+.vgrid { display: grid; grid-template-columns: 26px repeat(16, minmax(0, 1fr)); gap: 2px; min-width: 520px }
+.vgrid .hd { font: 10px var(--font-mono); color: var(--muted); text-align: center; align-self: center }
+.vc { aspect-ratio: 1.35; border: 0; border-radius: 2px; font: 9.5px var(--font-mono); padding: 0; color: var(--ink); background: color-mix(in srgb, var(--c) 22%, var(--surface)) }
+.vc:hover, .vc.on { outline: 2px solid var(--c); outline-offset: -1px }
+.flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 0 }
+.flow li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; position: relative; padding-bottom: 14px }
+.flow li::before { content: ""; position: absolute; left: 10px; top: 20px; bottom: 0; border-left: 2px solid var(--line) }
+.flow li:last-child::before { display: none }
+.flow .k { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--c); background: var(--surface); font: 600 10px var(--font-mono); display: grid; place-items: center }
+.flow b { font-weight: 600 }
+.flow small { display: block; color: var(--muted) }
+.flow code { color: var(--muted); font-size: 11px }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start }
+.pills { display: flex; flex-wrap: wrap; gap: 4px }
+.pills code { border: 1px solid var(--line); border-radius: 3px; padding: 2px 6px; background: var(--surface) }
+
+/* scheduler */
+.ladder { display: grid; gap: 4px }
+.rung { display: grid; grid-template-columns: 28px 130px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 5px }
+.rung .i { font: 600 11px var(--font-mono); color: var(--muted) }
+.rung b { font-family: var(--font-display) }
+.rung small { color: var(--muted); display: block }
+.rung .pol { display: block; font: 10.5px var(--font-mono); color: var(--g-proc) }
+.rung { grid-template-columns: 28px 190px minmax(0, 1fr) }
+.rq-sub svg { max-width: 150px }
+.rq { padding: 14px; display: grid; gap: 12px }
+.rq-top { display: flex; flex-wrap: wrap; gap: 6px }
+.rq-sub { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px }
+.rq-sub > div { border: 1px dashed var(--line); border-radius: 5px; padding: 10px; display: grid; gap: 6px; align-content: start }
+.rq-sub svg { width: 100%; height: auto }
+.rq-sub svg text { font: 9.5px var(--font-mono); fill: var(--ink) }
+.bitmap { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px }
+.bitmap i { aspect-ratio: 1; background: var(--sunk) }
+.bitmap i.set { background: var(--g-proc) }
+.sim { padding: 14px; display: grid; gap: 12px }
+.simtbl { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 560px }
+.simtbl th { text-align: left; font: 600 10.5px var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--line); padding: 6px 8px }
+.simtbl td { padding: 6px 8px; border-bottom: 1px solid var(--line) }
+.simtbl tr.pick td { background: color-mix(in srgb, var(--accent) 12%, transparent) }
+.simtbl input { width: 58px; font: inherit; padding: 3px 5px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg); color: var(--ink) }
+.elig { font: 600 10px var(--font-mono) }
+.elig.y { color: var(--g-net) } .elig.n { color: var(--muted) }
+.tl { display: flex; gap: 1px; height: 26px; overflow: hidden; border-radius: 3px; background: var(--sunk) }
+.tl i { flex: 0 0 14px; display: grid; place-items: center; font: 600 9px var(--font-mono); color: #fff }
+.share { height: 6px; background: var(--sunk); border-radius: 3px; overflow: hidden; min-width: 60px }
+.share i { display: block; height: 100%; background: var(--accent) }
+
+/* memory */
+.walker { padding: 14px; display: grid; gap: 12px }
+.wform { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.wform input[type=text] { font: 14px var(--font-mono); padding: 7px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); width: min(100%, 250px) }
+.ex { display: flex; flex-wrap: wrap; gap: 4px }
+.ex button { font-size: 12px; border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 2px 10px }
+.bits { display: grid; grid-template-columns: repeat(32, minmax(0, 1fr)); gap: 1px; min-width: 320px }
+.bits i { font: 600 9.5px var(--font-mono); text-align: center; padding: 3px 0; font-style: normal; background: color-mix(in srgb, var(--c) 22%, var(--surface)); color: var(--ink) }
+.bits i.sx { --c: var(--g-hw) ; opacity: .6 }
+.idx { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px }
+.idx div { border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: 4px; padding: 6px 8px; background: var(--surface) }
+.idx b { display: block; font: 700 18px var(--font-mono) }
+.idx small { color: var(--muted); font: 10.5px var(--font-mono) }
+.verdict { padding: 8px 12px; border-radius: 5px; background: var(--sunk) }
+.verdict.bad { background: color-mix(in srgb, var(--g-irq) 16%, var(--surface)) }
+.mmap { display: grid; gap: 1px; font-size: 12.5px }
+.mrow { display: grid; grid-template-columns: 150px 66px minmax(0, 1fr); gap: 10px; padding: 5px 10px; background: var(--surface); align-items: baseline }
+.mrow .a { font: 11px var(--font-mono); color: var(--muted) }
+.mrow .s { font: 11px var(--font-mono); text-align: right; font-variant-numeric: tabular-nums }
+.mrow.hole { background: transparent; color: var(--muted) }
+.mrow.hole .n { font-style: italic }
+.mrow.user { box-shadow: 3px 0 0 var(--g-user) inset }
+.mrow.kernel { box-shadow: 3px 0 0 var(--g-mm) inset }
+.mrow.noncanon { background: var(--sunk); box-shadow: 3px 0 0 var(--g-irq) inset }
+.mrow.on { outline: 2px solid var(--accent); outline-offset: -2px; position: relative }
+.mrow small { color: var(--muted) }
+.ftree { display: grid; gap: 8px }
+.fnode { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; padding: 8px 12px }
+.fnode b { font-weight: 600 }
+.fnode small { color: var(--muted); display: block }
+.fsplit { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px }
+.leaf { font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .05em }
+.arrow { text-align: center; color: var(--muted); font: 12px var(--font-mono); line-height: 1 }
+.alloc { display: grid; gap: 3px }
+.alloc button { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 10px; text-align: left; padding: 8px 12px; border: 1px solid var(--line); background: var(--surface); border-radius: 4px }
+.alloc button b { font-weight: 600 }
+.alloc button span { color: var(--muted) }
+#wm { width: 100%; height: auto; display: block }
+#wm text { font: 10.5px var(--font-mono); fill: var(--muted) }
+
+/* phone */
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr) }
+  main { padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+  aside.panel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; height: auto; max-height: 62vh; z-index: 8; border-left: 0; border-top: 1px solid var(--line);
+    box-shadow: 0 -10px 30px rgba(0,0,0,.18); padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); padding-left: max(18px, env(safe-area-inset-left, 0px)) }
+  .panel-close { display: inline-block; float: right }
+  aside.panel:not(.open) { display: none }
+  main { padding-bottom: 46vh }
+  .band { grid-template-columns: minmax(0, 1fr) }
+  .band-lab { grid-auto-flow: column; justify-content: start; gap: 10px; padding: 8px 12px }
+  .trace { grid-template-columns: minmax(0, 1fr) }
+  .rung { grid-template-columns: 22px minmax(0, 1fr) }
+  .rung > div:last-child { grid-column: 2 }
+  .mrow { grid-template-columns: minmax(0, 1fr) 60px; }
+  .mrow .a { grid-column: 1 / -1; order: 3 }
+  .alloc button { grid-template-columns: minmax(0, 1fr) }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><h1>The Linux Kernel</h1><span>Know Your Kernel · x86-64</span></div>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+  </div>
+</header>
+
+<div class="shell">
+  <main id="main">
+    <section class="view" id="v-stack" data-tab="stack" hidden>
+      <div class="sec-head"><h2>Layer stack</h2><p class="lede">Top is user space, bottom is silicon. Click a part to see what it connects to.</p></div>
+      <div class="stack" id="stack"></div>
+    </section>
+
+    <section class="view" id="v-network" data-tab="network" hidden>
+      <div class="sec-head"><h2>Subsystem network</h2><p class="lede">Drag to move, scroll or pinch to zoom. Rows follow the layer stack.</p></div>
+      <div class="filters" id="netf"></div>
+      <svg id="net" aria-label="Subsystem graph"></svg>
+    </section>
+
+    <section class="view" id="v-comm" data-tab="comm" hidden>
+      <div class="sec">
+        <div class="sec-head"><h2>Follow a request</h2><div class="seg" id="traceSel"></div></div>
+        <p class="lede" id="traceQ"></p>
+        <div class="vialeg" id="viaLeg"></div>
+        <div class="trace">
+          <div class="seq scroll-x" id="seq"></div>
+          <div class="sec">
+            <div class="player"><button class="btn" id="tPrev">Back</button><button class="btn pri" id="tNext">Next step</button><button class="btn" id="tAll">Show all</button></div>
+            <ol class="steps" id="steps"></ol>
+          </div>
+        </div>
+      </div>
+      <div class="sec">
+        <h2>Channels</h2>
+        <p class="lede">Every way data or control crosses a boundary. Solid = caller waits. Dashed = asynchronous.</p>
+        <div class="chgrid" id="chgrid"></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-irq" data-tab="interrupts" hidden>
+      <div class="sec">
+        <h2>IVT vs IDT</h2>
+        <div class="cmp" id="cmp"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><h2>One IDT gate · 128 bits</h2><p class="lede">Click a field.</p></div>
+        <div class="scroll-x"><div class="gate" id="gate"></div></div>
+        <div class="infobox" id="gateInfo"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><h2>All 256 vectors</h2><div class="legend" id="vleg"></div></div>
+        <div class="scroll-x"><div class="vgrid" id="vgrid"></div></div>
+        <div class="infobox" id="vInfo"></div>
+      </div>
+      <div class="two">
+        <div class="sec"><h2>Hardware interrupt, end to end</h2><ol class="flow" id="irqflow"></ol></div>
+        <div class="sec"><h2>Softirqs</h2><p class="lede">Deferred halves, in priority order. Raised in hard IRQ, run on exit.</p><div class="pills" id="softirqs"></div></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-sched" data-tab="scheduler" hidden>
+      <div class="two">
+        <div class="sec"><h2>Class pick order</h2><div class="ladder" id="ladder"></div></div>
+        <div class="sec"><h2>Per-CPU run queue</h2><div class="card rq" id="rq"></div></div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><h2>EEVDF simulator</h2><p class="lede">Pick = eligible task (vruntime ≤ V) with the earliest virtual deadline. Edit nice values, then step.</p></div>
+        <div class="card sim">
+          <div class="player"><button class="btn pri" id="sStep">Run one slice</button><button class="btn" id="sRun">Run 20</button><button class="btn" id="sAdd">Add task</button><button class="btn" id="sReset">Reset</button><span class="mono" id="sV"></span></div>
+          <div class="scroll-x"><table class="simtbl" id="simtbl"></table></div>
+          <div class="tl" id="tl" aria-label="Timeline of picks"></div>
+        </div>
+      </div>
+      <div class="sec"><h2>Context switch path</h2><ol class="flow" id="swflow"></ol></div>
+    </section>
+
+    <section class="view" id="v-mem" data-tab="memory" hidden>
+      <div class="sec">
+        <h2>Address walker</h2>
+        <div class="card walker">
+          <div class="wform">
+            <label for="va" class="mono">VA</label>
+            <input type="text" id="va" value="0x00007ffd5e8c1a40" spellcheck="false" autocomplete="off">
+            <div class="seg" id="lvlSel"><button aria-pressed="true" data-l="4">4-level</button><button aria-pressed="false" data-l="5">5-level</button></div>
+          </div>
+          <div class="ex" id="vaEx"></div>
+          <div class="scroll-x"><div class="bits" id="bits"></div></div>
+          <div class="idx" id="idx"></div>
+          <div class="verdict" id="verdict"></div>
+        </div>
+      </div>
+      <div class="two">
+        <div class="sec"><h2>Virtual memory map</h2><p class="lede">4-level layout. Highlighted row holds the walker's address.</p><div class="mmap" id="mmap"></div></div>
+        <div class="sec">
+          <h2>Page fault</h2><div class="ftree" id="ftree"></div>
+          <h2 style="margin-top:14px">Allocators</h2><div class="alloc" id="alloc"></div>
+          <h2 style="margin-top:14px">Watermarks</h2>
+          <div class="card" style="padding:10px"><svg id="wm" viewBox="0 0 420 190" role="img" aria-label="Free pages against watermarks, illustrative"></svg></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="data/components.js"></script>
+<script src="data/communication.js"></script>
+<script src="data/interrupts.js"></script>
+<script src="data/scheduler.js"></script>
+<script src="data/memory.js"></script>
+<script>
+(function () {
+"use strict";
+var K = window.KF, $ = function (s, r) { return (r || document).querySelector(s); };
+var byId = {}; K.components.forEach(function (c) { byId[c.id] = c; });
+var ELIXIR = "https://elixir.bootlin.com/linux/latest/source/";
+function esc(s) { return String(s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; }); }
+function md(s) { return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
+function gc(g) { return "var(--g-" + g + ")"; }
+function nbrs(id) {
+  var s = new Set(byId[id].links);
+  K.components.forEach(function (o) { if (o.links.indexOf(id) >= 0) s.add(o.id); });
+  return s;
+}
+function chip(c) { return '<button class="chip" data-id="' + c.id + '" style="--c:' + gc(c.group) + '"><span class="dot"></span>' + esc(c.name) + "</button>"; }
+
+/* ── tabs */
+var TABS = [["stack", "Stack"], ["network", "Network"], ["comm", "Communication"], ["interrupts", "Interrupts"], ["scheduler", "Scheduler"], ["memory", "Memory"]];
+var built = {}, cur = null;
+$("#tabs").innerHTML = TABS.map(function (t) { return '<button role="tab" data-t="' + t[0] + '" aria-selected="false">' + t[1] + "</button>"; }).join("");
+$("#tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) show(b.dataset.t, true); });
+function show(t, push) {
+  if (!TABS.some(function (x) { return x[0] === t; })) t = "stack";
+  cur = t;
+  document.querySelectorAll(".view").forEach(function (v) { v.hidden = v.dataset.tab !== t; });
+  document.querySelectorAll("#tabs button").forEach(function (b) { b.setAttribute("aria-selected", b.dataset.t === t); });
+  if (!built[t]) { built[t] = true; BUILD[t](); }
+  applySel();
+  if (push) { try { history.replaceState(null, "", "#" + t); } catch (e) {} }
+}
+
+/* ── selection + inspector */
+var sel = null;
+function select(id) { sel = id; renderPanel(); applySel(); }
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("[data-id]");
+  if (b && !b.closest("#net")) { select(b.dataset.id); }
+});
+function applySel() {
+  var n = sel ? nbrs(sel) : null;
+  document.querySelectorAll("#stack").forEach(function (root) {
+    root.classList.toggle("dim", !!sel);
+    root.querySelectorAll(".chip").forEach(function (el) {
+      el.classList.toggle("sel", el.dataset.id === sel);
+      el.classList.toggle("hl", !!n && n.has(el.dataset.id));
+    });
+  });
+  if (netApi) netApi.highlight(sel);
+}
+function renderPanel() {
+  var p = $("#panel");
+  p.classList.toggle("open", !!sel);
+  if (!sel) {
+    p.innerHTML = '<h3>Inspector</h3><p class="empty" style="margin-top:10px">Select any part in any view to see what it does, its key symbols, its source and its neighbours.</p>' +
+      '<div class="blk" style="margin-top:20px"><h3>Groups</h3><div class="linklist">' + Object.keys(K.groups).map(function (g) {
+        return '<span class="p-grp" style="--c:' + gc(g) + '"><span class="dot"></span>' + esc(K.groups[g].name) + "</span>"; }).join("") + "</div></div>";
+    return;
+  }
+  var c = byId[sel], n = Array.from(nbrs(sel));
+  var traces = K.traces.filter(function (t) { return t.steps.some(function (s) { return s.c === sel; }); });
+  var layer = K.layers.filter(function (l) { return l.id === c.layer; })[0];
+  p.innerHTML =
+    '<button class="btn panel-close" id="pclose">Close</button>' +
+    '<span class="p-grp" style="--c:' + gc(c.group) + '"><span class="dot"></span>' + esc(K.groups[c.group].name) + " · " + esc(layer.name) + "</span>" +
+    "<h2>" + esc(c.name) + "</h2>" +
+    '<p class="sum">' + md(c.sum) + "</p>" +
+    '<div class="blk"><h3>Key symbols</h3><div class="keys">' + c.keys.map(function (k) { return "<code>" + esc(k) + "</code>"; }).join("") + "</div></div>" +
+    (c.path ? '<div class="blk"><h3>Source</h3><a class="mono" href="' + ELIXIR + esc(c.path) + '" target="_blank" rel="noopener">' + esc(c.path) + " ↗</a></div>" : "") +
+    '<div class="blk"><h3>Connects to · ' + n.length + '</h3><div class="linklist">' + n.map(function (id) {
+      var o = byId[id]; return '<button class="linkbtn" data-id="' + id + '" style="--c:' + gc(o.group) + '"><span class="dot"></span>' + esc(o.name) + "</button>"; }).join("") + "</div></div>" +
+    (traces.length ? '<div class="blk"><h3>In traces</h3><div class="linklist">' + traces.map(function (t) {
+      return '<button class="linkbtn" data-trace="' + t.id + '">' + esc(t.name) + " →</button>"; }).join("") + "</div></div>" : "") +
+    '<div class="blk"><h3>Atlas note</h3><span class="note">atlas/components/' + c.id + ".md</span></div>";
+  var cl = $("#pclose"); if (cl) cl.onclick = function () { select(null); };
+  p.querySelectorAll("[data-trace]").forEach(function (b) { b.onclick = function () { show("comm", true); setTrace(b.dataset.trace); }; });
+  p.scrollTop = 0;
+}
+
+/* ── views */
+var BUILD = {}, netApi = null;
+
+BUILD.stack = function () {
+  var colGroups = ["proc", "sync", "mm", "fs", "net", "sec"];
+  $("#stack").innerHTML = K.layers.map(function (l) {
+    var items = K.components.filter(function (c) { return c.layer === l.id; });
+    var body;
+    if (l.id === "core") {
+      body = '<div class="cols">' + colGroups.map(function (g) {
+        return '<div class="col"><h3 style="--c:' + gc(g) + '"><span class="dot"></span>' + esc(K.groups[g].name) + '</h3><div class="chips">' +
+          items.filter(function (c) { return c.group === g; }).map(chip).join("") + "</div></div>";
+      }).join("") + "</div>";
+    } else body = items.map(chip).join("");
+    return '<div class="band' + (l.id === "abi" ? " boundary" : "") + '"><div class="band-lab"><b>' + esc(l.name) + "</b><span>" + esc(l.ring) + '</span></div><div class="band-body">' + body + "</div></div>";
+  }).join("");
+};
+
+BUILD.network = function () {
+  var groups = Object.keys(K.groups), on = new Set(groups);
+  $("#netf").innerHTML = groups.map(function (g) {
+    return '<button class="fbtn" data-g="' + g + '" aria-pressed="true" style="--c:' + gc(g) + '"><span class="dot"></span>' + esc(K.groups[g].name) + "</button>";
+  }).join("");
+  var svg = d3.select("#net"), el = $("#net");
+  var W = el.clientWidth || 800, H = el.clientHeight || 600;
+  svg.attr("viewBox", [0, 0, W, H]);
+  var ROW = { user: 0, abi: 1, core: 2.7, irq: 4.3, drv: 5.3, arch: 6.3, hw: 7.3 };
+  var COLX = { proc: .1, sync: .32, mm: .52, fs: .7, net: .86, sec: .96 };
+  var ty = function (c) { return 30 + ROW[c.layer] / 7.3 * (H - 60) + (c.layer === "core" ? (COLX[c.group] * 7 % 1 - .5) * 70 : 0); };
+  var tx = function (c) { return c.layer === "core" ? 30 + COLX[c.group] * (W - 90) : W / 2; };
+  var nodes = K.components.map(function (c) { return { id: c.id, c: c, x: tx(c) + (Math.random() - .5) * 200, y: ty(c) }; });
+  var seen = new Set(), links = [];
+  K.components.forEach(function (c) { c.links.forEach(function (t) { var k = [c.id, t].sort().join("|"); if (!seen.has(k)) { seen.add(k); links.push({ source: c.id, target: t }); } }); });
+  var g = svg.append("g");
+  svg.call(d3.zoom().scaleExtent([.4, 3]).on("zoom", function (e) { g.attr("transform", e.transform); }));
+  var lk = g.append("g").selectAll("line").data(links).join("line").attr("class", "lk");
+  var nd = g.append("g").selectAll("g").data(nodes).join("g").attr("class", "nd")
+    .on("click", function (e, d) { e.stopPropagation(); select(sel === d.id ? null : d.id); });
+  nd.append("circle").attr("r", function (d) { return 5 + Math.min(nbrs(d.id).size, 12) * .55; })
+    .attr("fill", function (d) { return gc(d.c.group); }).attr("stroke", "var(--surface)").attr("stroke-width", 1.5);
+  nd.append("text").attr("x", 10).attr("y", 4).text(function (d) { return d.c.name; });
+  var sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(function (d) { return d.id; }).distance(60).strength(.08))
+    .force("charge", d3.forceManyBody().strength(-140))
+    .force("y", d3.forceY(function (d) { return ty(d.c); }).strength(.6))
+    .force("x", d3.forceX(function (d) { return tx(d.c); }).strength(function (d) { return d.c.layer === "core" ? .35 : .03; }))
+    .force("collide", d3.forceCollide(30).strength(.9))
+    .on("tick", function () {
+      nodes.forEach(function (d) { d.x = Math.max(14, Math.min(W - 90, d.x)); d.y = Math.max(16, Math.min(H - 14, d.y)); });
+      lk.attr("x1", function (d) { return d.source.x; }).attr("y1", function (d) { return d.source.y; })
+        .attr("x2", function (d) { return d.target.x; }).attr("y2", function (d) { return d.target.y; });
+      nd.attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
+    });
+  nd.call(d3.drag()
+    .on("start", function (e, d) { if (!e.active) sim.alphaTarget(.2).restart(); d.fx = d.x; d.fy = d.y; })
+    .on("drag", function (e, d) { d.fx = e.x; d.fy = e.y; })
+    .on("end", function (e, d) { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+  svg.on("click", function () { select(null); });
+  function vis() {
+    nd.attr("display", function (d) { return on.has(d.c.group) ? null : "none"; });
+    lk.attr("display", function (d) { return on.has(d.source.c.group) && on.has(d.target.c.group) ? null : "none"; });
+  }
+  $("#netf").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    var g2 = b.dataset.g;
+    if (on.has(g2)) on.delete(g2); else on.add(g2);
+    b.setAttribute("aria-pressed", on.has(g2)); vis();
+  });
+  netApi = { highlight: function (id) {
+    var n = id ? nbrs(id) : null;
+    el.classList.toggle("dimmed", !!id);
+    nd.classed("hl", function (d) { return !!id && (d.id === id || n.has(d.id)); });
+    lk.classed("hl", function (d) { return !!id && (d.source.id === id || d.target.id === id); });
+  } };
+};
+
+/* communication */
+var VIA = {
+  call:    { n: "function call", c: "var(--muted)", a: false },
+  trap:    { n: "trap / syscall", c: "var(--g-abi)", a: false },
+  mmio:    { n: "MMIO write", c: "var(--g-drv)", a: false },
+  copy:    { n: "copy to user", c: "var(--g-fs)", a: false },
+  dma:     { n: "DMA", c: "var(--g-mm)", a: true },
+  irq:     { n: "interrupt", c: "var(--g-irq)", a: true },
+  softirq: { n: "softirq", c: "var(--g-sync)", a: true },
+  wake:    { n: "sleep / wake", c: "var(--g-proc)", a: true },
+  event:   { n: "event message", c: "var(--g-net)", a: true }
+};
+var trace = null, tStep = -1;
+function setTrace(id) {
+  trace = K.traces.filter(function (t) { return t.id === id; })[0] || K.traces[0];
+  tStep = -1;
+  document.querySelectorAll("#traceSel button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.t === trace.id); });
+  $("#traceQ").textContent = trace.q + ".";
+  drawSeq(); drawSteps(); markStep();
+}
+function drawSeq() {
+  var L = K.lanes, lx = function (id) { var i = L.map(function (l) { return l.id; }).indexOf(id); return 70 + i * 100; };
+  var rowH = 34, top = 36, H = top + trace.steps.length * rowH + 10, W = 520;
+  var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Sequence diagram">';
+  s += '<defs>' + Object.keys(VIA).map(function (k) {
+    return '<marker id="ah-' + k + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="' + VIA[k].c + '"/></marker>';
+  }).join("") + "</defs>";
+  L.forEach(function (l) {
+    s += '<text class="lanehead" x="' + lx(l.id) + '" y="16" text-anchor="middle">' + esc(l.name) + "</text>";
+    s += '<line class="lane" x1="' + lx(l.id) + '" y1="24" x2="' + lx(l.id) + '" y2="' + (H - 4) + '"/>';
+  });
+  trace.steps.forEach(function (st, i) {
+    var y = top + i * rowH + rowH / 2, v = VIA[st.via], x1 = lx(st.a), x2 = lx(st.b);
+    var dash = v.a ? ' stroke-dasharray="5 4"' : "";
+    s += '<g class="row" data-i="' + i + '"><rect class="hit" x="0" y="' + (y - rowH / 2) + '" width="' + W + '" height="' + rowH + '" rx="3"/>';
+    s += '<circle cx="14" cy="' + y + '" r="9" fill="' + v.c + '"/><text class="num" x="14" y="' + (y + 3.5) + '" text-anchor="middle">' + (i + 1) + "</text>";
+    if (x1 === x2) {
+      s += '<path d="M' + x1 + "," + (y - 7) + " h28 v14 h-24" + '" fill="none" stroke="' + v.c + '" stroke-width="2"' + dash + ' marker-end="url(#ah-' + st.via + ')"/>';
+      s += '<circle cx="' + x1 + '" cy="' + y + '" r="3.5" fill="' + v.c + '"/>';
+    } else {
+      var dir = x2 > x1 ? 1 : -1;
+      s += '<line x1="' + x1 + '" y1="' + y + '" x2="' + (x2 - dir * 3) + '" y2="' + y + '" stroke="' + v.c + '" stroke-width="2"' + dash + ' marker-end="url(#ah-' + st.via + ')"/>';
+      s += '<circle cx="' + x1 + '" cy="' + y + '" r="3.5" fill="' + v.c + '"/>';
+    }
+    s += "</g>";
+  });
+  $("#seq").innerHTML = s + "</svg>";
+  $("#seq").querySelectorAll(".row").forEach(function (r) { r.addEventListener("click", function () { tStep = +r.dataset.i; markStep(true); }); });
+}
+function drawSteps() {
+  $("#steps").innerHTML = trace.steps.map(function (st, i) {
+    var v = VIA[st.via], c = byId[st.c];
+    return '<li data-i="' + i + '" style="--c:' + v.c + '"><span class="n">' + (i + 1) + "</span><div><span class=\"via\">" + esc(v.n) + "</span> <b>" + md(st.t) + "</b><small>" + md(st.d) +
+      ' · <a href="#" data-cid="' + c.id + '">' + esc(c.name) + "</a></small></div></li>";
+  }).join("");
+  $("#steps").querySelectorAll("li").forEach(function (li) {
+    li.addEventListener("click", function (e) {
+      var a = e.target.closest("[data-cid]");
+      if (a) { e.preventDefault(); select(a.dataset.cid); }
+      tStep = +li.dataset.i; markStep(true);
+    });
+  });
+}
+function markStep(selComp) {
+  document.querySelectorAll("#seq .row, #steps li").forEach(function (el) {
+    var i = +el.dataset.i;
+    el.classList.toggle("on", i === tStep);
+    el.classList.toggle("off", tStep >= 0 && i > tStep);
+  });
+  if (selComp && tStep >= 0) select(trace.steps[tStep].c);
+}
+BUILD.comm = function () {
+  $("#traceSel").innerHTML = K.traces.map(function (t) { return '<button data-t="' + t.id + '" aria-pressed="false">' + esc(t.name) + "</button>"; }).join("");
+  $("#traceSel").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) setTrace(b.dataset.t); });
+  $("#viaLeg").innerHTML = Object.keys(VIA).map(function (k) { return '<span style="--c:' + VIA[k].c + '"><i class="' + (VIA[k].a ? "async" : "") + '"></i>' + esc(VIA[k].n) + "</span>"; }).join("");
+  $("#tNext").onclick = function () { tStep = Math.min(trace.steps.length - 1, tStep + 1); markStep(true); };
+  $("#tPrev").onclick = function () { tStep = Math.max(0, tStep - 1); markStep(true); };
+  $("#tAll").onclick = function () { tStep = -1; markStep(); };
+  var dirs = [["u2k", "User ↔ kernel"], ["k", "Inside the kernel"], ["k2h", "Kernel ↔ hardware"]];
+  $("#chgrid").innerHTML = dirs.map(function (d) {
+    return '<div class="chcol"><h3>' + esc(d[1]) + "</h3>" + K.channels.filter(function (c) { return c.dir === d[0]; }).map(function (c) {
+      return '<button class="ch" data-id="' + c.c + '"><b>' + esc(c.name) + '</b><span class="mode">' + esc(c.mode) + "</span><small>" + esc(c.how) + "</small></button>";
+    }).join("") + "</div>";
+  }).join("");
+  if (!trace) setTrace("disk");
+};
+
+/* interrupts */
+var VK = { exception: ["CPU exception", "var(--g-irq)"], reserved: ["Reserved", "var(--g-hw)"], isa: ["Legacy ISA", "var(--g-arch)"],
+  device: ["Device (dynamic)", "var(--g-drv)"], syscall: ["int 0x80", "var(--g-abi)"], system: ["System / IPI", "var(--g-mm)"] };
+BUILD.interrupts = function () {
+  function card(x, cells, col) {
+    return '<div class="card"><div class="sec-head"><h2>' + esc(x.name) + '</h2><span class="mono" style="color:var(--muted)">' + esc(x.mode) + "</span></div>" +
+      '<div class="bar" title="one entry">' + cells.map(function (w) { return '<i style="background:' + col + ';flex:' + w + '"></i>'; }).join("") + "</div>" +
+      "<dl>" + [["entry", x.entry], ["count", x.count], ["total", x.size], ["location", x.where], ["holds", x.holds], ["protection", x.protect], ["used by", x.user]]
+        .map(function (r) { return "<dt>" + r[0] + "</dt><dd>" + md(r[1]) + "</dd>"; }).join("") + "</dl></div>";
+  }
+  $("#cmp").innerHTML = card(K.ivtIdt.ivt, [2, 2], "var(--g-arch)") + card(K.ivtIdt.idt, [2, 2, 1, 1, 2, 4, 4], "var(--g-irq)");
+  // gate rows: 4 rows of 32 bits, high bit left
+  var rows = [0, 1, 2, 3].map(function (r) {
+    var lo = r * 32, hi = lo + 31, h = '<span class="rl">bits ' + hi + "–" + lo + "</span>";
+    var segs = K.gate.filter(function (f) { return f.hi >= lo && f.lo <= hi; }).sort(function (a, b) { return b.lo - a.lo; });
+    segs.forEach(function (f) {
+      var a = Math.max(f.lo, lo), b = Math.min(f.hi, hi), span = b - a + 1;
+      h += '<button class="fld' + (/^0$|reserved/.test(f.f) ? " z" : "") + '" data-f="' + K.gate.indexOf(f) + '" style="grid-column: span ' + span + '">' + esc(f.f) +
+        "<small>" + (span > 4 ? b + ":" + a : span > 1 ? span + "b" : "") + "</small></button>";
+    });
+    return '<div class="grow">' + h + "</div>";
+  });
+  $("#gate").innerHTML = rows.join("");
+  function gateInfo(i) {
+    var f = K.gate[i];
+    document.querySelectorAll(".fld").forEach(function (b) { b.classList.toggle("on", +b.dataset.f === i); });
+    $("#gateInfo").innerHTML = "<b>" + esc(f.f) + '</b> <span class="mono" style="color:var(--muted)">bits ' + f.lo + "–" + f.hi + "</span><br>" + md(f.d);
+  }
+  $("#gate").addEventListener("click", function (e) { var b = e.target.closest(".fld"); if (b) gateInfo(+b.dataset.f); });
+  gateInfo(4);
+
+  $("#vleg").innerHTML = Object.keys(VK).map(function (k) { return '<span><span class="dot" style="--c:' + VK[k][1] + '"></span>' + VK[k][0] + "</span>"; }).join("");
+  var h = '<span></span>';
+  for (var c = 0; c < 16; c++) h += '<span class="hd">' + c.toString(16).toUpperCase() + "</span>";
+  for (var r = 0; r < 16; r++) {
+    h += '<span class="hd">' + r.toString(16).toUpperCase() + "0</span>";
+    for (c = 0; c < 16; c++) {
+      var v = r * 16 + c, info = K.vectorInfo(v);
+      h += '<button class="vc" data-v="' + v + '" style="--c:' + VK[info.kind][1] + '" title="' + esc(info.hex + " " + info.name) + '">' + (v < 32 ? esc(info.tag === "—" ? "" : info.tag.replace("#", "")) : v.toString(16).toUpperCase().padStart(2, "0")) + "</button>";
+    }
+  }
+  $("#vgrid").innerHTML = h;
+  function vInfo(v) {
+    var i = K.vectorInfo(v);
+    document.querySelectorAll(".vc").forEach(function (b) { b.classList.toggle("on", +b.dataset.v === v); });
+    var extra = v === 14 ? " CR2 holds the faulting address; error code says read/write, user/kernel, present." :
+      v === 8 ? " Uses its own IST stack so it works even when the kernel stack is broken." :
+      v === 2 ? " Cannot be masked by IF. Own IST stack." :
+      v === 3 ? " DPL 3 so user code can hit `int3` (debuggers)." :
+      v === 0xec ? " Drives the scheduler tick and hrtimers." :
+      v === 0xfd ? " One CPU asks another to run schedule()." :
+      i.kind === "device" ? " Assigned by the vector matrix allocator when a driver requests an IRQ. See /proc/interrupts." : "";
+    $("#vInfo").innerHTML = '<span class="mono"><b>' + i.hex + "</b> · " + v + '</span> <span class="p-grp" style="--c:' + VK[i.kind][1] + '"><span class="dot"></span>' + VK[i.kind][0] + "</span><br><b>" + esc(i.name) + "</b>" + md(extra);
+  }
+  $("#vgrid").addEventListener("click", function (e) { var b = e.target.closest(".vc"); if (b) vInfo(+b.dataset.v); });
+  vInfo(14);
+
+  var wc = { hw: "var(--g-hw)", cpu: "var(--g-arch)", asm: "var(--g-arch)", c: "var(--g-irq)" };
+  $("#irqflow").innerHTML = K.irqPath.map(function (s, i) {
+    return '<li style="--c:' + wc[s.w] + '"><span class="k">' + (i + 1) + "</span><div><b>" + esc(s.s) + "</b><small>" + md(s.d) + "</small>" + (s.p ? "<code>" + esc(s.p) + "</code>" : "") + "</div></li>";
+  }).join("");
+  $("#softirqs").innerHTML = K.softirqs.map(function (s, i) { return "<code>" + i + " " + s + "</code>"; }).join("") +
+    '<p class="lede" style="margin-top:8px">Overflow runs in <code>ksoftirqd/N</code>. NET_RX carries most packet processing.</p>';
+};
+
+/* scheduler */
+var simTasks, simHist, SLICE = 3;
+function simReset() {
+  simTasks = [{ n: "A", nice: 0 }, { n: "B", nice: 0 }, { n: "C", nice: 5 }].map(mk);
+  simHist = []; simDraw();
+}
+function mk(t) { var w = K.weightOf(t.nice); return { n: t.n, nice: t.nice, w: w, vr: 0, dl: SLICE * 1024 / w, ran: 0 }; }
+function V() { var sw = 0, sv = 0; simTasks.forEach(function (t) { sw += t.w; sv += t.vr * t.w; }); return sw ? sv / sw : 0; }
+function simPick() {
+  var v = V(), best = null;
+  simTasks.forEach(function (t) { if (t.vr <= v + 1e-9 && (!best || t.dl < best.dl)) best = t; });
+  return best;
+}
+function simStep() {
+  var t = simPick(); if (!t) return;
+  t.vr += SLICE * 1024 / t.w; t.ran += SLICE; t.dl = t.vr + SLICE * 1024 / t.w;
+  simHist.push(t.n); if (simHist.length > 60) simHist.shift();
+}
+var TC = ["var(--g-fs)", "var(--g-proc)", "var(--g-mm)", "var(--g-drv)", "var(--g-net)", "var(--g-abi)"];
+function simDraw() {
+  var v = V(), next = simPick(), tot = simTasks.reduce(function (a, t) { return a + t.ran; }, 0), sw = simTasks.reduce(function (a, t) { return a + t.w; }, 0);
+  $("#sV").textContent = "V = " + v.toFixed(2) + " · slice " + SLICE + " ms";
+  $("#simtbl").innerHTML = "<thead><tr><th>Task</th><th>nice</th><th>weight</th><th>vruntime</th><th>deadline</th><th>lag</th><th>eligible</th><th>CPU got</th><th>fair share</th></tr></thead><tbody>" +
+    simTasks.map(function (t, i) {
+      var el = t.vr <= v + 1e-9, got = tot ? t.ran / tot : 0;
+      return '<tr class="' + (t === next ? "pick" : "") + '"><td><span class="dot" style="display:inline-block;--c:' + TC[i % TC.length] + '"></span> <b>' + t.n + (t === next ? " ← next" : "") + "</b></td>" +
+        '<td><input type="number" min="-20" max="19" value="' + t.nice + '" data-i="' + i + '" id="nice-' + i + '" aria-label="nice of ' + t.n + '"></td>' +
+        "<td>" + t.w + "</td><td>" + t.vr.toFixed(2) + "</td><td>" + t.dl.toFixed(2) + "</td><td>" + (v - t.vr).toFixed(2) + "</td>" +
+        '<td><span class="elig ' + (el ? "y" : "n") + '">' + (el ? "YES" : "no") + "</span></td>" +
+        "<td>" + (got * 100).toFixed(0) + '%<div class="share"><i style="width:' + got * 100 + '%"></i></div></td><td>' + (t.w / sw * 100).toFixed(0) + "%</td></tr>";
+    }).join("") + "</tbody>";
+  $("#tl").innerHTML = simHist.map(function (n) {
+    var i = simTasks.map(function (t) { return t.n; }).indexOf(n);
+    return '<i style="background:' + TC[(i < 0 ? 0 : i) % TC.length] + '">' + n + "</i>";
+  }).join("");
+}
+BUILD.scheduler = function () {
+  $("#ladder").innerHTML = K.schedClasses.map(function (c, i) {
+    return '<div class="rung"><span class="i">' + (i + 1) + "</span><div><b>" + esc(c.name) + '</b><span class="pol">' + esc(c.pol) + "</span></div><div><small>" + esc(c.d) + "</small></div></div>";
+  }).join("") + '<p class="lede" style="margin-top:6px">First class with a runnable task wins. Code: <code>pick_next_task()</code>.</p>';
+  var setBits = [0, 9, 49]; var bm = ""; for (var i = 0; i < 100; i++) bm += '<i class="' + (setBits.indexOf(i) >= 0 ? "set" : "") + '"></i>';
+  function tree(lbl) {
+    return '<svg viewBox="0 0 150 76"><g stroke="var(--line)" stroke-width="1.5"><line x1="75" y1="14" x2="40" y2="44"/><line x1="75" y1="14" x2="110" y2="44"/><line x1="40" y1="44" x2="20" y2="68"/></g>' +
+      [[75, 14, lbl[0]], [40, 44, lbl[1]], [110, 44, lbl[2]], [20, 68, lbl[3]]].map(function (n, j) {
+        return '<circle cx="' + n[0] + '" cy="' + n[1] + '" r="9" fill="' + (j === 3 ? "var(--g-proc)" : "var(--surface)") + '" stroke="var(--g-proc)" stroke-width="1.5"/><text x="' + n[0] + '" y="' + (n[1] + 3) + '" text-anchor="middle">' + n[2] + "</text>";
+      }).join("") + "</svg>";
+  }
+  $("#rq").innerHTML = '<div class="sec-head"><b class="mono">struct rq · CPU 0</b><span class="mono" style="color:var(--muted)">one per CPU, own lock</span></div>' +
+    '<div class="rq-top pills"><code>curr</code><code>nr_running</code><code>clock</code><code>idle</code><code>stop</code><code>lock</code></div>' +
+    '<div class="rq-sub">' +
+    '<div><h3>dl_rq</h3>' + tree(["d3", "d1", "d7", "d0"]) + '<small class="lede">RB-tree by absolute deadline. Leftmost runs.</small></div>' +
+    '<div><h3>rt_rq</h3><div class="bitmap" aria-label="priority bitmap">' + bm + '</div><small class="lede">Bitmap of 100 priority lists. First set bit wins.</small></div>' +
+    '<div><h3>cfs_rq</h3>' + tree(["e", "c", "g", "a"]) + '<small class="lede">RB-tree by virtual deadline, augmented with min vruntime to find eligible tasks fast.</small></div>' +
+    "</div>";
+  $("#swflow").innerHTML = K.switchPath.map(function (s, i) {
+    return '<li style="--c:var(--g-proc)"><span class="k">' + (i + 1) + "</span><div><b class=\"mono\">" + esc(s.s) + "</b><small>" + esc(s.d) + "</small><code>" + esc(s.p) + "</code></div></li>";
+  }).join("");
+  $("#sStep").onclick = function () { simStep(); simDraw(); };
+  $("#sRun").onclick = function () { for (var i = 0; i < 20; i++) simStep(); simDraw(); };
+  $("#sReset").onclick = simReset;
+  $("#sAdd").onclick = function () {
+    if (simTasks.length >= 6) return;
+    var t = mk({ n: "ABCDEF"[simTasks.length], nice: 0 }), v = V();
+    t.vr = v; t.dl = v + SLICE * 1024 / t.w; simTasks.push(t); simDraw();
+  };
+  $("#simtbl").addEventListener("change", function (e) {
+    var inp = e.target.closest("input"); if (!inp) return;
+    var t = simTasks[+inp.dataset.i], n = Math.max(-20, Math.min(19, parseInt(inp.value, 10) || 0));
+    t.nice = n; t.w = K.weightOf(n); t.dl = t.vr + SLICE * 1024 / t.w; simDraw();
+  });
+  simReset();
+};
+
+/* memory */
+var lvl = 4;
+var LC = ["var(--g-fs)", "var(--g-proc)", "var(--g-mm)", "var(--g-drv)", "var(--g-net)", "var(--g-abi)"];
+function walk() {
+  var raw = $("#va").value.trim().replace(/_/g, ""), a;
+  try { a = BigInt(/^0x/i.test(raw) ? raw : "0x" + raw); } catch (e) { a = null; }
+  if (a === null || a < 0n || a > 0xffffffffffffffffn) {
+    $("#verdict").className = "verdict bad"; $("#verdict").textContent = "Enter a 64-bit hex address, like 0x7ffd5e8c1a40."; return;
+  }
+  var levels = lvl === 4 ? K.levels4 : K.levels5, top = levels[0].hi;
+  var bitsH = "", owner = [];
+  for (var b = 63; b >= 0; b--) {
+    var li = -1; levels.forEach(function (l, i) { if (b <= l.hi && b >= l.lo) li = i; });
+    var bit = (a >> BigInt(b)) & 1n;
+    bitsH += '<i class="' + (li < 0 ? "sx" : "") + '" style="' + (li >= 0 ? "--c:" + LC[li] : "") + '" title="bit ' + b + '">' + bit + "</i>";
+  }
+  $("#bits").innerHTML = bitsH;
+  $("#idx").innerHTML = levels.map(function (l, i) {
+    var w = BigInt(l.hi - l.lo + 1), val = (a >> BigInt(l.lo)) & ((1n << w) - 1n);
+    return '<div style="--c:' + LC[i] + '"><small>' + l.n + " [" + l.hi + ":" + l.lo + "]</small><b>" + (l.n === "offset" ? "0x" + val.toString(16) : val.toString()) + "</b></div>";
+  }).join("");
+  var upper = a >> BigInt(top), allOnes = (1n << BigInt(64 - top)) - 1n;
+  var canon = upper === 0n || upper === allOnes;
+  var region = null;
+  if (lvl === 4) K.memMap.forEach(function (r, i) { if (a >= BigInt("0x" + r.s) && a <= BigInt("0x" + r.e)) region = i; });
+  document.querySelectorAll(".mrow").forEach(function (r) { r.classList.toggle("on", +r.dataset.i === region); });
+  var v = $("#verdict");
+  v.className = "verdict" + (canon ? "" : " bad");
+  if (!canon) v.innerHTML = "<b>Non-canonical.</b> Bits 63:" + top + " must all equal bit " + top + ". The CPU raises #GP before any page walk.";
+  else {
+    var half = upper === 0n ? "user half" : "kernel half";
+    v.innerHTML = "<b>Canonical, " + half + ".</b> " + (region !== null ? "Region: <b>" + esc(K.memMap[region].n) + "</b>. " + esc(K.memMap[region].d) : lvl === 5 ? "5-level map differs; regions shown for 4-level only." : "") +
+      " Walk: CR3 → " + levels.slice(0, -1).map(function (l) { return l.n; }).join(" → ") + " → page + offset.";
+  }
+}
+function wmChart() {
+  var W = 420, H = 190, x0 = 34, x1 = W - 10, y0 = 14, y1 = H - 24;
+  var marks = { high: 0.78, low: 0.58, min: 0.38 };
+  var pts = [.95, .9, .82, .74, .66, .6, .56, .6, .67, .74, .79, .72, .62, .5, .4, .34, .41, .5, .58, .66, .73, .79];
+  var X = function (i) { return x0 + i / (pts.length - 1) * (x1 - x0); }, Y = function (v) { return y1 - v * (y1 - y0); };
+  var s = '<rect x="' + x0 + '" y="' + y0 + '" width="' + (x1 - x0) + '" height="' + (y1 - y0) + '" fill="var(--sunk)"/>';
+  [["high", "var(--g-net)"], ["low", "var(--g-sync)"], ["min", "var(--g-irq)"]].forEach(function (m) {
+    var y = Y(marks[m[0]]);
+    s += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + y + '" y2="' + y + '" stroke="' + m[1] + '" stroke-dasharray="4 3" stroke-width="1.5"/><text x="' + (x0 - 4) + '" y="' + (y + 3) + '" text-anchor="end" fill="' + m[1] + '">' + m[0] + "</text>";
+  });
+  s += '<path d="' + pts.map(function (v, i) { return (i ? "L" : "M") + X(i).toFixed(1) + "," + Y(v).toFixed(1); }).join("") + '" fill="none" stroke="var(--accent)" stroke-width="2.2"/>';
+  s += '<circle cx="' + X(6) + '" cy="' + Y(pts[6]) + '" r="4" fill="var(--g-sync)"/><text x="' + (X(6) + 6) + '" y="' + (Y(pts[6]) + 14) + '">kswapd wakes</text>';
+  s += '<circle cx="' + X(15) + '" cy="' + Y(pts[15]) + '" r="4" fill="var(--g-irq)"/><text x="' + (X(15) + 6) + '" y="' + (Y(pts[15]) + 4) + '">direct reclaim</text>';
+  s += '<circle cx="' + X(10) + '" cy="' + Y(pts[10]) + '" r="4" fill="var(--g-net)"/><text x="' + (X(10) - 4) + '" y="' + (Y(pts[10]) - 8) + '" text-anchor="middle">kswapd sleeps</text>';
+  s += '<text x="' + x0 + '" y="' + (H - 6) + '">time →</text><text x="' + x1 + '" y="' + (H - 6) + '" text-anchor="end">free pages (illustrative)</text>';
+  $("#wm").innerHTML = s;
+}
+BUILD.memory = function () {
+  var ex = [["user stack", "0x00007ffd5e8c1a40"], ["direct map", "0xffff888100000000"], ["vmalloc", "0xffffc90000a00000"],
+    ["vmemmap", "0xffffea0000040000"], ["kernel text", "0xffffffff81000000"], ["non-canonical", "0x0000900000000000"]];
+  $("#vaEx").innerHTML = ex.map(function (e) { return '<button data-va="' + e[1] + '">' + e[0] + "</button>"; }).join("");
+  $("#vaEx").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { $("#va").value = b.dataset.va; walk(); } });
+  $("#va").addEventListener("input", walk);
+  $("#lvlSel").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return; lvl = +b.dataset.l;
+    document.querySelectorAll("#lvlSel button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); }); walk();
+  });
+  $("#mmap").innerHTML = K.memMap.map(function (r, i) {
+    return '<div class="mrow ' + r.k + '" data-i="' + i + '"><span class="a">' + r.s.replace(/(....)(?=.)/g, "$1 ") + '</span><span class="s">' + esc(r.size) + '</span><span class="n"><b>' + esc(r.n) + "</b>" + (r.d ? " <small>" + esc(r.d) + "</small>" : "") + "</span></div>";
+  }).join("");
+  var F = {}; K.faultFlow.forEach(function (f) { F[f.id] = f; });
+  var LEAF = { minor: "var(--g-net)", "major if I/O": "var(--g-sync)", major: "var(--g-proc)", fatal: "var(--g-irq)" };
+  function node(f, comp) { return '<div class="fnode"' + (comp ? ' data-id="' + comp + '" role="button" tabindex="0" style="cursor:pointer"' : "") + "><b>" + esc(f.t) + "</b>" + (f.leaf ? ' <span class="leaf" style="color:' + LEAF[f.leaf] + '">' + esc(f.leaf) + "</span>" : "") + "<small>" + esc(f.d) + "</small></div>"; }
+  $("#ftree").innerHTML = node(F.pf, "entry") + '<div class="arrow">↓</div>' + '<div class="fsplit">' + node(F.kern) + node(F.vma, "vma") + '</div><div class="arrow">↓ VMA ok</div>' + node(F.walk, "pgtables") +
+    '<div class="arrow">↓ inspect PTE</div><div class="fsplit">' + node(F.anon, "pagefault") + node(F.file, "pagecache") + node(F.swp, "swap") + node(F.cow, "pagefault") + "</div>" +
+    '<div class="arrow">no VMA / bad permission ↓</div>' + node(F.segv, "signals");
+  $("#alloc").innerHTML = K.allocStack.map(function (s) { return '<button data-id="' + s.c + '"><b>' + esc(s.n) + "</b><span>" + esc(s.d) + "</span></button>"; }).join("");
+  wmChart(); walk();
+};
+
+/* boot */
+renderPanel();
+var start = "stack"; try { start = (location.hash || "#stack").slice(1); } catch (e) {}
+show(start, false);
+window.addEventListener("hashchange", function () { show(location.hash.slice(1), false); });
+})();
+</script>
